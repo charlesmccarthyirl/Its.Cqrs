@@ -57,14 +57,15 @@ namespace Microsoft.Its.Domain.Api.Documentation
             get
             {
                 // TODO: (Summary) cache this
-                var node = DotNetXmlDocumentation
-                    .Descendants("member")
-                    .FirstOrDefault(n => n.Attributes()
-                                          .Any(a => a.Name == "name" &&
-                                                    a.Value == "T:" + commandType.FullName.Replace("+", ".")));
-                return node.IfNotNull()
-                           .Then(n => n.Value.Trim())
-                           .Else(() => "");
+                return DotNetXmlDocumentation
+                    .IfNotNull()
+                    .Then(xml => xml
+                              .Descendants("member")
+                              .FirstOrDefault(n => n.Attributes()
+                                                    .Any(a => a.Name == "name" &&
+                                                              a.Value == "T:" + commandType.FullName.Replace("+", "."))).IfNotNull()
+                              .Then(n => n.Value.Trim()))
+                    .Else(() => "");
             }
         }
 
@@ -117,7 +118,15 @@ namespace Microsoft.Its.Domain.Api.Documentation
                     // TODO: (XmlDocumentation) optimize
                     var xmlFilePath = Path.ChangeExtension(commandType.Assembly.CodeBase, ".xml");
 
-                    var xDocument = XDocument.Load(xmlFilePath);
+                    XDocument xDocument = null;
+
+                    try
+                    {
+                        xDocument = XDocument.Load(xmlFilePath);
+                    }
+                    catch (FileNotFoundException)
+                    {
+                    }
 
                     return xDocument;
                 });

@@ -98,6 +98,7 @@
     <Compile Include="EventHandlerProgress.cs" />
     <Compile Include="EventHandlerProgressCalculator.cs" />
     <Compile Include="EventStoreDatabaseInitializer{T}.cs" />
+    <Compile Include="EventStore.cs" />
     <Compile Include="Migrations\201409181840497_InitialCreate.cs" />
     <Compile Include="Migrations\201409181840497_InitialCreate.Designer.cs">
       <DependentUpon>201409181840497_InitialCreate.cs</DependentUpon>

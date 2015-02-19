@@ -30,7 +30,10 @@ namespace Microsoft.Its.Domain.Sql
         /// </summary>
         /// <param name="db">The database.</param>
         /// <param name="lockResourceName">The lock resource.</param>
-        public AppLock(EventStoreDbContext db, string lockResourceName)
+        /// <param name="timeoutInMilliseconds">The amount of time that the AppLock constructor will block if waiting on a resource that was acquired by a different caller.</param>
+        public AppLock(EventStoreDbContext db,
+                       string lockResourceName,
+                       int timeoutInMilliseconds = 60000)
         {
             this.db = db;
             this.lockResourceName = lockResourceName;
@@ -41,13 +44,14 @@ DECLARE @result int;
 EXEC @result = sp_getapplock @Resource = @lockResource,
                                 @LockMode = 'Exclusive',
                                 @LockOwner = 'Session',
-                                @LockTimeout = 60000;
+                                @LockTimeout = @timeoutInMilliseconds;
 SELECT @result";
 
             Debug.WriteLine(String.Format("Trying to acquire app lock '{0}' (#{1})", lockResourceName, GetHashCode()));
 
             var getAppLock = connection.CreateCommand();
-            getAppLock.Parameters.Add(new SqlParameter("lockResource", lockResourceName));
+            getAppLock.Parameters.Add(new SqlParameter("lockResource", lockResourceName));  
+            getAppLock.Parameters.Add(new SqlParameter("timeoutInMilliseconds", timeoutInMilliseconds));
             getAppLock.CommandText = cmd;
 
             var result = -1000;
@@ -57,18 +61,21 @@ SELECT @result";
             }
             catch (SqlException exception)
             {
+#if DEBUG
                 if (exception.Message.StartsWith("Timeout expired."))
                 {
                     Debug.WriteLine("Timeout expired waiting for sp_getapplock. (#{0})", GetHashCode());
                     DebugWriteLocks();
                     return;
                 }
+#endif
 
                 throw;
             }
 
             resultCode = result;
 
+#if DEBUG
             if (result >= 0)
             {
                 Debug.WriteLine(String.Format("Acquired app lock '{0}' with result {1} (#{2})",
@@ -84,14 +91,14 @@ SELECT @result";
                                               GetHashCode()));
             }
 
-#if DEBUG
+
             Active[this] = this;
 #endif
         }
 
+#if DEBUG
         private void DebugWriteLocks()
         {
-#if DEBUG
             Debug.WriteLine("Existing app locks:");
             var viewExistingLocks = connection.CreateCommand();
             viewExistingLocks.CommandText = @"SELECT TOP 1000 * FROM [sys].[dm_tran_locks] where resource_description != ''";
@@ -102,8 +109,8 @@ SELECT @result";
                 Debug.WriteLine(string.Join(Environment.NewLine,
                                             values.Select((v, i) => row.GetName(i) + ": " + v)));
             }
-#endif
         }
+#endif
 
         /// <summary>
         /// Gets a value indicating whether a lock is acquired.
@@ -132,12 +139,13 @@ SELECT @result";
 #if DEBUG
             AppLock lok;
             Active.TryRemove(this, out lok);
-#endif  
+
 
             Debug.WriteLine(String.Format("Disposing {0} AppLock for '{1}' (#{2})",
                                           IsAcquired ? "acquired" : "unacquired",
                                           lockResourceName,
                                           GetHashCode()));
+#endif  
             connection.Dispose();
             db.Dispose();
         }

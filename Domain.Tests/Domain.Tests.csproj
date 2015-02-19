@@ -134,6 +134,7 @@
     <Compile Include="EventTests.cs" />
     <Compile Include="Infrastructure\Logging.cs" />
     <Compile Include="Infrastructure\NoOpEventBus.cs" />
+    <Compile Include="Infrastructure\TaskExtensions.cs" />
     <Compile Include="InProcessEventBusTests.cs" />
     <Compile Include="ObjectIdTests.cs" />
     <Compile Include="OptionalTests.cs" />

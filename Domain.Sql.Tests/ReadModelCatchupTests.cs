@@ -20,6 +20,7 @@ using Sample.Domain.Ordering.Commands;
 using Sample.Domain.Projections;
 using Assert = NUnit.Framework.Assert;
 using Its.Log.Instrumentation;
+using Newtonsoft.Json;
 
 namespace Microsoft.Its.Domain.Sql.Tests
 {
