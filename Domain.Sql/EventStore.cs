@@ -1,5 +1,6 @@
 using System;
 using System.Data.Entity.Infrastructure;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Its.Recipes;
 
@@ -20,25 +21,43 @@ namespace Microsoft.Its.Domain.Sql
             string resourceName,
             TimeSpan? wait = null)
         {
+            if (context == null)
+            {
+                throw new ArgumentNullException("context");
+            }
+            if (resourceName == null)
+            {
+                throw new ArgumentNullException("resourceName");
+            }
+
+            // open the connection immediately, which will prevent the DbContext from being used for queries
+            var connection = ((IObjectContextAdapter) context).ObjectContext.Connection;
+            connection.Open();
+#if DEBUG
+            Debug.WriteLine("Opening connection for context " + context.GetHashCode());
+#endif
+
             var tcs = new TaskCompletionSource<bool>();
 
             Task.Run(() =>
             {
-                var dbConnection = ((IObjectContextAdapter) context).ObjectContext.Connection;
-                dbConnection.Open();
-
                 // this call will block if the AppLock is not acquired
                 var appLock = new AppLock(context,
                                           resourceName,
                                           wait.IfNotNull()
-                                              .Then(t => (int) t.TotalMilliseconds)
+                                              .Then(t => (int?) t.TotalMilliseconds)
                                               .ElseDefault());
 
                 var isAcquired = appLock.IsAcquired;
 
                 if (!isAcquired)
                 {
-                    dbConnection.Dispose();
+#if DEBUG
+                    Debug.WriteLine("Disposing connection for context " + context.GetHashCode());
+#endif
+
+                    // dispose the connection so it can't be used for queries
+                    connection.Dispose();
                 }
 
                 tcs.SetResult(isAcquired);

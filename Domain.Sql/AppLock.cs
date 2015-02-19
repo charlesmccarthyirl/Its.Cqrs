@@ -33,9 +33,10 @@ namespace Microsoft.Its.Domain.Sql
         /// <param name="timeoutInMilliseconds">The amount of time that the AppLock constructor will block if waiting on a resource that was acquired by a different caller.</param>
         public AppLock(EventStoreDbContext db,
                        string lockResourceName,
-                       int timeoutInMilliseconds = 60000)
+                       int? timeoutInMilliseconds = 60000)
         {
             this.db = db;
+            timeoutInMilliseconds = timeoutInMilliseconds ?? 60000;
             this.lockResourceName = lockResourceName;
             connection = db.OpenConnection();
 
