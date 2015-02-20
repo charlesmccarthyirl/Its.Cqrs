@@ -33,9 +33,9 @@ namespace Microsoft.Its.Domain.Sql
             // open the connection immediately, which will prevent the DbContext from being used for queries
             var connection = ((IObjectContextAdapter) context).ObjectContext.Connection;
             connection.Open();
-#if DEBUG
-            Debug.WriteLine("Opening connection for context " + context.GetHashCode());
-#endif
+
+            // FIX: (ExclusiveConnection) remove trace output
+            Trace.WriteLine("Opening connection for context " + context.GetHashCode());
 
             var tcs = new TaskCompletionSource<bool>();
 
@@ -52,9 +52,7 @@ namespace Microsoft.Its.Domain.Sql
 
                 if (!isAcquired)
                 {
-#if DEBUG
-                    Debug.WriteLine("Disposing connection for context " + context.GetHashCode());
-#endif
+                    Trace.WriteLine("Disposing connection for context " + context.GetHashCode());
 
                     // dispose the connection so it can't be used for queries
                     connection.Dispose();

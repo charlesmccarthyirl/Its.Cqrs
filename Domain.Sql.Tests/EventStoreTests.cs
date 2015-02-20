@@ -91,6 +91,5 @@ namespace Microsoft.Its.Domain.Sql.Tests
             acquired = await secondConnection.ExclusiveConnection(resourceName);
             acquired.Should().BeTrue();
         }
-
     }
 }
