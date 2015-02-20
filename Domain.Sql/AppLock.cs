@@ -13,7 +13,7 @@ namespace Microsoft.Its.Domain.Sql
     /// <summary>
     /// Represents sole access to the read model database for the purpose of updating read models.
     /// </summary>
-#if DEBUG
+#if TRACE
         public 
 #else
         internal
@@ -48,7 +48,7 @@ EXEC @result = sp_getapplock @Resource = @lockResource,
                                 @LockTimeout = @timeoutInMilliseconds;
 SELECT @result";
 
-            Debug.WriteLine(String.Format("Trying to acquire app lock '{0}' (#{1})", lockResourceName, GetHashCode()));
+            Trace.WriteLine(String.Format("Trying to acquire app lock '{0}' (#{1})", lockResourceName, db.GetHashCode()));
 
             var getAppLock = connection.CreateCommand();
             getAppLock.Parameters.Add(new SqlParameter("lockResource", lockResourceName));  
@@ -62,10 +62,10 @@ SELECT @result";
             }
             catch (SqlException exception)
             {
-#if DEBUG
+#if TRACE
                 if (exception.Message.StartsWith("Timeout expired."))
                 {
-                    Debug.WriteLine("Timeout expired waiting for sp_getapplock. (#{0})", GetHashCode());
+                    Trace.WriteLine(string.Format("Timeout expired waiting for sp_getapplock. (#{0})", db.GetHashCode()));
                     DebugWriteLocks();
                     return;
                 }
@@ -76,20 +76,20 @@ SELECT @result";
 
             resultCode = result;
 
-#if DEBUG
+#if TRACE
             if (result >= 0)
             {
-                Debug.WriteLine(String.Format("Acquired app lock '{0}' with result {1} (#{2})",
+                Trace.WriteLine(String.Format("Acquired app lock '{0}' with result {1} (#{2})",
                                               lockResourceName,
                                               result,
-                                              GetHashCode()));
+                                              db.GetHashCode()));
             }
             else
             {
-                Debug.WriteLine(String.Format("Failed to acquire app lock '{0}' with code {1} (#{2})",
+                Trace.WriteLine(String.Format("Failed to acquire app lock '{0}' with code {1} (#{2})",
                                               lockResourceName,
                                               result,
-                                              GetHashCode()));
+                                              db.GetHashCode()));
             }
 
 
@@ -97,17 +97,17 @@ SELECT @result";
 #endif
         }
 
-#if DEBUG
+#if TRACE
         private void DebugWriteLocks()
         {
-            Debug.WriteLine("Existing app locks:");
+            Trace.WriteLine("Existing app locks:");
             var viewExistingLocks = connection.CreateCommand();
             viewExistingLocks.CommandText = @"SELECT TOP 1000 * FROM [sys].[dm_tran_locks] where resource_description != ''";
             foreach (DbDataRecord row in viewExistingLocks.ExecuteReader())
             {
                 var values = new object[row.FieldCount];
                 row.GetValues(values);
-                Debug.WriteLine(string.Join(Environment.NewLine,
+                Trace.WriteLine(string.Join(Environment.NewLine,
                                             values.Select((v, i) => row.GetName(i) + ": " + v)));
             }
         }
@@ -137,12 +137,12 @@ SELECT @result";
 
         public void Dispose()
         {
-#if DEBUG
+#if TRACE
             AppLock lok;
             Active.TryRemove(this, out lok);
 
 
-            Debug.WriteLine(String.Format("Disposing {0} AppLock for '{1}' (#{2})",
+            Trace.WriteLine(String.Format("Disposing {0} AppLock for '{1}' (#{2})",
                                           IsAcquired ? "acquired" : "unacquired",
                                           lockResourceName,
                                           GetHashCode()));
@@ -151,7 +151,7 @@ SELECT @result";
             db.Dispose();
         }
 
-#if DEBUG
+#if TRACE
         public readonly static ConcurrentDictionary<AppLock, AppLock> Active = new ConcurrentDictionary<AppLock, AppLock>();
 #endif
     }
