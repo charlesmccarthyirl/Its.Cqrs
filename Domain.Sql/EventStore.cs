@@ -34,9 +34,6 @@ namespace Microsoft.Its.Domain.Sql
             var connection = ((IObjectContextAdapter) context).ObjectContext.Connection;
             connection.Open();
 
-            // FIX: (ExclusiveConnection) remove trace output
-            Trace.WriteLine("Opening connection for context " + context.GetHashCode());
-
             var tcs = new TaskCompletionSource<bool>();
 
             Task.Run(() =>
