@@ -54,9 +54,23 @@ namespace Microsoft.Its.Domain.Sql.Tests
                     return;
                 }
 
+    // TODO: (EventStoreDbTest) figure out a db cleanup story
+//#if !DEBUG
+//            new EventStoreDbContext().Database.Delete();
+//            new OtherEventStoreDbContext().Database.Delete();
+//            new ReadModelDbContext().Database.Delete();
+//            new ReadModels1DbContext().Database.Delete();
+//            new ReadModels2DbContext().Database.Delete();       
+//            new CommandSchedulerDbContext().Database.Delete();
+//#endif
+              
                 using (var eventStore = new EventStoreDbContext())
                 {
                     new EventStoreDatabaseInitializer<EventStoreDbContext>().InitializeDatabase(eventStore);
+                }  
+                using (var db = new CommandSchedulerDbContext())
+                {
+                    new CommandSchedulerDatabaseInitializer().InitializeDatabase(db);
                 }
                 using (var eventStore = new OtherEventStoreDbContext())
                 {
@@ -73,10 +87,6 @@ namespace Microsoft.Its.Domain.Sql.Tests
                 using (var db = new ReadModels2DbContext())
                 {
                     new ReadModelDatabaseInitializer<ReadModels2DbContext>().InitializeDatabase(db);
-                }
-                using (var db = new CommandSchedulerDbContext())
-                {
-                    new CommandSchedulerDatabaseInitializer().InitializeDatabase(db);
                 }
 
                 databasesInitialized = true;
