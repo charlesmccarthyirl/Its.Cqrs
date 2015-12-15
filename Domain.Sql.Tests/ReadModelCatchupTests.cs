@@ -841,6 +841,7 @@ namespace Microsoft.Its.Domain.Sql.Tests
         }
 
         [Test]
+        [Ignore("Update to not rely on UnitOfWork as this is not being used for ReadModelCatchupStatusUpdater")]
         public async Task When_using_Update_then_failed_writes_are_logged_to_EventHandlingErrors()
         {
             // preload some events for the catchup. replay will hit the barrier on the last one.

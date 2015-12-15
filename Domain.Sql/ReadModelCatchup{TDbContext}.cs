@@ -218,102 +218,83 @@ namespace Microsoft.Its.Domain.Sql
         {
             long eventsProcessed = 0;
 
-            foreach (var storedEvent in query.Events)
+            using (var statusUpdater = new ReadModelCatchupStatusUpdater(CreateReadModelDbContext))
             {
-                eventsProcessed++;
-
-                IncludeReadModelsNeeding(storedEvent);
-
-                if (cancellationDisposable.IsDisposed)
+                foreach (var storedEvent in query.Events)
                 {
-                    break;
-                }
+                    eventsProcessed++;
 
-                IEvent @event = null;
-                var now = Clock.Now();
+                    IncludeReadModelsNeeding(storedEvent);
 
-                try
-                {
-                    // update projectors
-                    @event = storedEvent.ToDomainEvent();
-
-                    if (@event != null)
+                    if (cancellationDisposable.IsDisposed)
                     {
-                        using (var work = CreateUnitOfWork(@event))
+                        break;
+                    }
+
+                    IEvent @event = null;
+
+                    var now = Clock.Now();
+                    try
+                    {
+                        // update projectors
+                        @event = storedEvent.ToDomainEvent();
+
+                        if (@event != null)
                         {
                             await bus.PublishAsync(@event);
-                             
-                            var infos = work.Resource<DbContext>().Set<ReadModelInfo>();
-                            
-                            subscribedReadModelInfos.ForEach(i =>
-                            {
-                                var eventsRemaining = query.ExpectedNumberOfEvents - eventsProcessed;
-                                
-                                infos.Attach(i);
-                                i.LastUpdated = now;
-                                i.CurrentAsOfEventId = storedEvent.Id;
-                                i.LatencyInMilliseconds = (now - @event.Timestamp).TotalMilliseconds;
-                                i.BatchRemainingEvents = eventsRemaining;
-                                
-                                if (eventsProcessed == 1)
-                                {
-                                    i.BatchStartTime = now;
-                                    i.BatchTotalEvents = query.ExpectedNumberOfEvents;
-                                }
-                                
-                                if (i.InitialCatchupStartTime == null)
-                                {
-                                    i.InitialCatchupStartTime = now;
-                                    i.InitialCatchupEvents = query.ExpectedNumberOfEvents;
-                                }
-                                
-                                if (eventsRemaining == 0 && i.InitialCatchupEndTime == null)
-                                {
-                                    i.InitialCatchupEndTime = now;
-                                }
-                            });
 
-                            work.VoteCommit();
+                            var latencyInMilliseconds = (now - @event.Timestamp).TotalMilliseconds;
+                            var currentAsOfEventId = storedEvent.Id;
+                            var names = subscribedReadModelInfos.Select(i => i.Name);
+
+                            statusUpdater.Update(
+                                names: names,
+                                lastUpdated: now,
+                                currentAsOfEventId: currentAsOfEventId,
+                                latencyInMilliseconds: latencyInMilliseconds,
+                                expectedNumberOfEvents: query.ExpectedNumberOfEvents,
+                                eventsProcessed: eventsProcessed); // TODO: Test async
+                        }
+                        else
+                        {
+                            throw new SerializationException(string.Format(
+                                "Deserialization: Event type '{0}.{1}' not found",
+                                storedEvent.StreamName,
+                                storedEvent.Type));
                         }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        throw new SerializationException(string.Format(
-                            "Deserialization: Event type '{0}.{1}' not found",
-                            storedEvent.StreamName,
-                            storedEvent.Type));
+                        var error = @event == null
+                                        ? SerializationError(ex, storedEvent)
+                                        : new Domain.EventHandlingError(ex, @event: @event);
+
+                        ReadModelUpdate.ReportFailure(
+                            error,
+                            () => CreateReadModelDbContext());
                     }
+
+                    var status = new ReadModelCatchupStatus
+                    {
+                        BatchCount = query.ExpectedNumberOfEvents,
+                        NumberOfEventsProcessed = eventsProcessed,
+                        CurrentEventId = storedEvent.Id,
+                        EventTimestamp = storedEvent.Timestamp,
+                        StatusTimeStamp = now,
+                        CatchupName = Name
+                    };
+
+                    if (status.IsEndOfBatch)
+                    {
+                        // reset the re-entrancy flag 
+                        running = 0;
+                        query.Dispose();
+                    }
+
+                    ReportStatus(status);
                 }
-                catch (Exception ex)
-                {
-                    var error = @event == null
-                                    ? SerializationError(ex, storedEvent)
-                                    : new Domain.EventHandlingError(ex, @event: @event);
-
-                    ReadModelUpdate.ReportFailure(
-                        error,
-                        () => CreateReadModelDbContext());
-                }
-
-                var status = new ReadModelCatchupStatus
-                {
-                    BatchCount = query.ExpectedNumberOfEvents,
-                    NumberOfEventsProcessed = eventsProcessed,
-                    CurrentEventId = storedEvent.Id,
-                    EventTimestamp = storedEvent.Timestamp,
-                    StatusTimeStamp = now,
-                    CatchupName = Name
-                };
-
-                if (status.IsEndOfBatch)
-                {
-                    // reset the re-entrancy flag 
-                    running = 0;
-                    query.Dispose();
-                }
-
-                ReportStatus(status);
             }
+
             return eventsProcessed;
         }
 

@@ -132,6 +132,7 @@
     </Compile>
     <Compile Include="Migrations\CommandSchedulerMigrationConfiguration.cs" />
     <Compile Include="ReadModelCatchupResult.cs" />
+    <Compile Include="ReadModelCatchupStatusUpdater.cs" />
     <Compile Include="ReservationServiceDatabaseInitializer.cs" />
     <Compile Include="CommandScheduler\SqlCommandScheduler.cs" />
     <Compile Include="CommandScheduler\SqlCommandSchedulerBinder{T}.cs" />
