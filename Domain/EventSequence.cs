@@ -19,6 +19,7 @@ namespace Microsoft.Its.Domain
         private readonly Guid aggregateId;
         private long version;
         private long startSequenceFrom;
+        private long maxSequenceNumber;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventSequence"/> class.
@@ -82,9 +83,8 @@ namespace Microsoft.Its.Domain
                                                           @event.SequenceNumber));
             }
 
-            version = events.Count > 0 ? 
-                Math.Max(@event.SequenceNumber, events.Max(ee => ee.SequenceNumber)) : 
-                @event.SequenceNumber;
+            maxSequenceNumber = Math.Max(maxSequenceNumber, @event.SequenceNumber);
+            version = maxSequenceNumber;
           
             events.Add(@event);
         }

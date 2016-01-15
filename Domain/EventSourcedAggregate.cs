@@ -81,14 +81,9 @@ namespace Microsoft.Its.Domain
 
             eventHistory.AddRange(sourceEvents);
 
-            if (SourceSnapshot != null)
-            {
-                pendingEvents.SetVersion(Math.Max(eventHistory.Version, SourceSnapshot.Version));
-            }
-            else
-            {
-                pendingEvents.SetVersion(eventHistory.Version);
-            }
+            var version = Math.Max(eventHistory.Version, SourceSnapshot == null ? 0 : SourceSnapshot.Version);
+
+            pendingEvents.SetVersion(version);
 
             if (eventHistory.AggregateId != Id)
             {
