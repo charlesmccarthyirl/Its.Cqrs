@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft. All rights reserved. 
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System;
 using System.Collections.Generic;
 
 namespace Microsoft.Its.Domain
@@ -17,7 +18,10 @@ namespace Microsoft.Its.Domain
 
         public int GetHashCode(IEvent obj)
         {
-            return (obj.AggregateId + "|" + obj).GetHashCode();
+            unchecked
+            {
+                return (obj.SequenceNumber.GetHashCode() * 397) ^ obj.AggregateId.GetHashCode();
+            }
         }
     }
 }
