@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
@@ -74,19 +75,15 @@ namespace Microsoft.Its.Domain.Sql
                     events = events.Where(e => e.UtcTime <= d);
                 }
 
-                var eventsArray = await events.ToArrayAsync();
+                var eventsArray = events.AsEnumerable().Select(e => e.ToDomainEvent()).ToArray();
 
                 if (snapshot != null)
                 {
-                    aggregate = AggregateType<TAggregate>.FromSnapshot(
-                        snapshot,
-                        eventsArray.Select(e => e.ToDomainEvent()));
+                    aggregate = AggregateType<TAggregate>.FromSnapshot(snapshot, eventsArray);
                 }
                 else if (eventsArray.Length > 0)
                 {
-                    aggregate = AggregateType<TAggregate>.FromEventHistory(
-                        id,
-                        eventsArray.Select(e => e.ToDomainEvent()));
+                    aggregate = AggregateType<TAggregate>.FromEventHistory(id, eventsArray);
                 }
             }
 
