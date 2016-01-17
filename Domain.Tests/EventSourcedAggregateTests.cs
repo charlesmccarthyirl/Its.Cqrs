@@ -113,10 +113,12 @@ namespace Microsoft.Its.Domain.Tests
 
         [Category("Performance")]
         [Test]
-        public void When_creating_an_aggregate_with_a_large_number_of_source_events_then_it_is_not_horribly_slow()
+        public void When_creating_an_aggregate_with_a_large_number_of_source_events_in_non_incrementing_order_then_it_is_not_horribly_slow()
         {
             var count = 1000000;
             var largeListOfEvents = Enumerable.Range(1, count).Select(i => new TestAggregate.SimpleEvent { SequenceNumber = i }).ToList();
+            Shuffle(largeListOfEvents, new Random(42));
+
             var sw = Stopwatch.StartNew();
             var t = new TestAggregate(Guid.NewGuid(), largeListOfEvents);
             sw.Stop();
@@ -458,6 +460,19 @@ namespace Microsoft.Its.Domain.Tests
             public async Task<bool> HasBeenApplied(Guid aggregateId, string etag)
             {
                 return hasBeenApplied();
+            }
+        }
+
+        private static void Shuffle<T>(IList<T> list, Random randomNumberGenerator)
+        {
+            int n = list.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = randomNumberGenerator.Next(n + 1);
+                T value = list[k];
+                list[k] = list[n];
+                list[n] = value;
             }
         }
 
