@@ -92,6 +92,43 @@ namespace Microsoft.Its.Domain.Tests
         }
 
         [Test]
+        public void When_source_events_contain_events_with_the_same_sequence_number_and_the_same_types_then_using_them_to_source_an_object_throws()
+        {
+            Action ctorCall = () =>
+            {
+                new Order(
+                    Guid.NewGuid(),
+                    new Order.CustomerInfoChanged { SequenceNumber = 1, CustomerName = "joe" },
+                    new Order.CustomerInfoChanged { SequenceNumber = 1, CustomerName = "joe" }
+                    );
+            };
+
+            ctorCall.Invoking(c => c())
+                    .ShouldThrow<ArgumentException>()
+                    .And
+                    .Message.Should().Contain("Event with SequenceNumber 1 is already present in the sequence.");
+        }
+
+        [Test]
+        public void When_source_events_contain_events_with_the_same_sequence_number_but_different_types_then_using_them_to_source_an_object_throws()
+        {
+            Action ctorCall = () =>
+            {
+                new Order(
+                    Guid.NewGuid(),
+                    new Order.CustomerInfoChanged { SequenceNumber = 1, CustomerName = "joe" },
+                    new Order.CustomerInfoChanged { SequenceNumber = 2, CustomerName = "joe" },
+                    new Order.Cancelled { SequenceNumber = 1, Reason = "just 'cause..."}
+                    );
+            };
+
+            ctorCall.Invoking(c => c())
+                    .ShouldThrow<ArgumentException>()
+                    .And
+                    .Message.Should().Contain("Event with SequenceNumber 1 is already present in the sequence.");
+        }
+
+        [Test]
         public void When_a_command_is_applied_its_updates_are_applied_to_the_state_of_the_aggregate()
         {
             var order = new Order();
