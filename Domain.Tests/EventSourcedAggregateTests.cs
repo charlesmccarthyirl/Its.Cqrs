@@ -2,6 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using FluentAssertions;
 using System.Linq;
 using System.Reactive.Disposables;
@@ -107,6 +109,22 @@ namespace Microsoft.Its.Domain.Tests
                     .ShouldThrow<ArgumentException>()
                     .And
                     .Message.Should().Contain("Event with SequenceNumber 1 is already present in the sequence.");
+        }
+
+        [Category("Performance")]
+        [Test]
+        public void When_creating_an_aggregate_with_a_large_number_of_source_events_then_it_is_not_horribly_slow()
+        {
+            var count = 1000000;
+            var largeListOfEvents = Enumerable.Range(1, count).Select(i => new TestAggregate.SimpleEvent { SequenceNumber = i }).ToList();
+            var sw = Stopwatch.StartNew();
+            var t = new TestAggregate(Guid.NewGuid(), largeListOfEvents);
+            sw.Stop();
+
+            Console.WriteLine("Elapsed: {0}ms", sw.ElapsedMilliseconds);
+            t.Version.Should().Be(count);
+            t.NumberOfUpdatesExecuted.Should().Be(count);
+            sw.ElapsedMilliseconds.Should().BeLessThan(10000);
         }
 
         [Test]
@@ -441,6 +459,24 @@ namespace Microsoft.Its.Domain.Tests
             {
                 return hasBeenApplied();
             }
+        }
+
+        public class TestAggregate : EventSourcedAggregate<TestAggregate>
+        {
+            public TestAggregate(Guid id, IEnumerable<IEvent> eventHistory)
+                : base(id, eventHistory)
+            {
+            }
+
+            public class SimpleEvent : Event<TestAggregate>
+            {
+                public override void Update(TestAggregate order)
+                {
+                    order.NumberOfUpdatesExecuted++;
+                }
+            }
+
+            public long NumberOfUpdatesExecuted { get; set; }
         }
     }
 }
