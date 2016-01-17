@@ -111,24 +111,6 @@ namespace Microsoft.Its.Domain.Tests
                     .Message.Should().Contain("Event with SequenceNumber 1 is already present in the sequence.");
         }
 
-        [Category("Performance")]
-        [Test]
-        public void When_creating_an_aggregate_with_a_large_number_of_source_events_in_non_incrementing_order_then_it_is_not_horribly_slow()
-        {
-            var count = 1000000;
-            var largeListOfEvents = Enumerable.Range(1, count).Select(i => new TestAggregate.SimpleEvent { SequenceNumber = i }).ToList();
-            Shuffle(largeListOfEvents, new Random(42));
-
-            var sw = Stopwatch.StartNew();
-            var t = new TestAggregate(Guid.NewGuid(), largeListOfEvents);
-            sw.Stop();
-
-            Console.WriteLine("Elapsed: {0}ms", sw.ElapsedMilliseconds);
-            t.Version.Should().Be(count);
-            t.NumberOfUpdatesExecuted.Should().Be(count);
-            sw.ElapsedMilliseconds.Should().BeLessThan(10000);
-        }
-
         [Test]
         public void When_source_events_contain_events_with_the_same_sequence_number_but_different_types_then_using_them_to_source_an_object_throws()
         {
@@ -461,6 +443,24 @@ namespace Microsoft.Its.Domain.Tests
             {
                 return hasBeenApplied();
             }
+        }
+
+        [Category("Performance")]
+        [Test]
+        public void When_creating_an_aggregate_with_a_large_number_of_source_events_in_non_incrementing_order_then_it_is_not_horribly_slow()
+        {
+            var count = 1000000;
+            var largeListOfEvents = Enumerable.Range(1, count).Select(i => new TestAggregate.SimpleEvent { SequenceNumber = i }).ToList();
+            Shuffle(largeListOfEvents, new Random(42));
+
+            var sw = Stopwatch.StartNew();
+            var t = new TestAggregate(Guid.NewGuid(), largeListOfEvents);
+            sw.Stop();
+
+            Console.WriteLine("Elapsed: {0}ms", sw.ElapsedMilliseconds);
+            t.Version.Should().Be(count);
+            t.NumberOfUpdatesExecuted.Should().Be(count);
+            sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
         }
 
         private static void Shuffle<T>(IList<T> list, Random randomNumberGenerator)
