@@ -447,14 +447,14 @@ namespace Microsoft.Its.Domain.Tests
 
         [Category("Performance")]
         [Test]
-        public void When_creating_an_aggregate_with_a_large_number_of_source_events_in_non_incrementing_order_then_it_is_not_horribly_slow()
+        public void When_calling_ctor_of_an_aggregate_with_a_large_number_of_source_events_in_non_incrementing_order_then_the_operation_completes_quickly()
         {
             var count = 1000000;
-            var largeListOfEvents = Enumerable.Range(1, count).Select(i => new TestAggregate.SimpleEvent { SequenceNumber = i }).ToList();
+            var largeListOfEvents = Enumerable.Range(1, count).Select(i => new PerfTestAggregate.SimpleEvent { SequenceNumber = i }).ToList();
             Shuffle(largeListOfEvents, new Random(42));
 
             var sw = Stopwatch.StartNew();
-            var t = new TestAggregate(Guid.NewGuid(), largeListOfEvents);
+            var t = new PerfTestAggregate(Guid.NewGuid(), largeListOfEvents);
             sw.Stop();
 
             Console.WriteLine("Elapsed: {0}ms", sw.ElapsedMilliseconds);
@@ -476,16 +476,16 @@ namespace Microsoft.Its.Domain.Tests
             }
         }
 
-        public class TestAggregate : EventSourcedAggregate<TestAggregate>
+        public class PerfTestAggregate : EventSourcedAggregate<PerfTestAggregate>
         {
-            public TestAggregate(Guid id, IEnumerable<IEvent> eventHistory)
+            public PerfTestAggregate(Guid id, IEnumerable<IEvent> eventHistory)
                 : base(id, eventHistory)
             {
             }
 
-            public class SimpleEvent : Event<TestAggregate>
+            public class SimpleEvent : Event<PerfTestAggregate>
             {
-                public override void Update(TestAggregate order)
+                public override void Update(PerfTestAggregate order)
                 {
                     order.NumberOfUpdatesExecuted++;
                 }
